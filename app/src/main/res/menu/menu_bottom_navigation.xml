@@ -1,0 +1,28 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/dashboardFragment"
+        android:icon="@drawable/ic_nav_home_selector"
+        android:title="@string/nav_home" />
+
+    <item
+        android:id="@+id/transactionsFragment"
+        android:icon="@drawable/ic_nav_transactions_selector"
+        android:title="@string/nav_transactions" />
+
+    <item
+        android:id="@+id/addTransactionFragment"
+        android:icon="@drawable/ic_nav_add"
+        android:title="@string/nav_add_label" />
+
+    <item
+        android:id="@+id/reportingFragment"
+        android:icon="@drawable/ic_nav_reporting_selector"
+        android:title="@string/nav_reporting" />
+
+    <item
+        android:id="@+id/settingsFragment"
+        android:icon="@drawable/ic_nav_settings_selector"
+        android:title="@string/nav_settings" />
+
+</menu>

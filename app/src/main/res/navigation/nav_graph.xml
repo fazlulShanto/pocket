@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/dashboardFragment">
+
+    <fragment
+        android:id="@+id/dashboardFragment"
+        android:name="dev.spikeysanju.expensetracker.view.dashboard.DashboardFragment"
+        android:label="@string/nav_home"
+        tools:layout="@layout/fragment_dashboard">
+        <action
+            android:id="@+id/action_dashboardFragment_to_transactionDetailsFragment"
+            app:destination="@id/transactionDetailsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+        <action
+            android:id="@+id/action_dashboardFragment_to_aboutFragment"
+            app:destination="@id/aboutFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+        <action
+            android:id="@+id/action_dashboardFragment_to_tagsFragment"
+            app:destination="@id/tagsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+    </fragment>
+    <fragment
+        android:id="@+id/transactionsFragment"
+        android:name="dev.spikeysanju.expensetracker.view.transactions.TransactionsFragment"
+        android:label="@string/nav_transactions"
+        tools:layout="@layout/fragment_transactions" />
+    <fragment
+        android:id="@+id/reportingFragment"
+        android:name="dev.spikeysanju.expensetracker.view.reporting.ReportingFragment"
+        android:label="@string/nav_reporting"
+        tools:layout="@layout/fragment_reporting" />
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="dev.spikeysanju.expensetracker.view.settings.SettingsFragment"
+        android:label="@string/nav_settings"
+        tools:layout="@layout/fragment_settings" />
+    <fragment
+        android:id="@+id/voiceSettingsFragment"
+        android:name="dev.spikeysanju.expensetracker.view.voicesettings.VoiceSettingsFragment"
+        android:label="@string/voice_settings_title"
+        tools:layout="@layout/fragment_voice_settings" />
+    <fragment
+        android:id="@+id/tagsFragment"
+        android:name="dev.spikeysanju.expensetracker.view.tags.TagsFragment"
+        android:label="@string/tags"
+        tools:layout="@layout/fragment_tags" />
+    <fragment
+        android:id="@+id/addTransactionFragment"
+        android:name="dev.spikeysanju.expensetracker.view.add.AddTransactionFragment"
+        android:label="@string/text_add_transaction"
+        tools:layout="@layout/fragment_add_transaction">
+    </fragment>
+    <fragment
+        android:id="@+id/transactionDetailsFragment"
+        android:name="dev.spikeysanju.expensetracker.view.details.TransactionDetailsFragment"
+        android:label="Details"
+        tools:layout="@layout/fragment_transaction_details">
+        <argument
+            android:name="transaction"
+            app:argType="dev.spikeysanju.expensetracker.model.Transaction" />
+        <action
+            android:id="@+id/action_transactionDetailsFragment_to_editTransactionFragment"
+            app:destination="@id/editTransactionFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+        <action
+            android:id="@+id/action_transactionDetailsFragment_to_errorDialog"
+            app:destination="@id/errorDialog" />
+    </fragment>
+    <fragment
+        android:id="@+id/editTransactionFragment"
+        android:name="dev.spikeysanju.expensetracker.view.edit.EditTransactionFragment"
+        android:label="Edit Transaction"
+        tools:layout="@layout/fragment_edit_transaction">
+        <argument
+            android:name="transaction"
+            app:argType="dev.spikeysanju.expensetracker.model.Transaction" />
+        <action
+            android:id="@+id/edit_to_details"
+            app:destination="@id/transactionDetailsFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/aboutFragment"
+        android:name="dev.spikeysanju.expensetracker.view.about.AboutFragment"
+        android:label="About"
+        tools:layout="@layout/fragment_about" />
+    <dialog
+        android:id="@+id/errorDialog"
+        android:name="dev.spikeysanju.expensetracker.view.dialog.ErrorDialog"
+        android:label="ErrorDialog"
+        tools:layout="@layout/error_dialog_layout">
+        <argument
+            android:name="title"
+            app:argType="string" />
+        <argument
+            android:name="message"
+            app:argType="string" />
+    </dialog>
+</navigation>

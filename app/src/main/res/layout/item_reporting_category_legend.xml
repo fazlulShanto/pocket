@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/dimen_12"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <View
+        android:id="@+id/legend_swatch"
+        android:layout_width="14dp"
+        android:layout_height="14dp" />
+
+    <TextView
+        android:id="@+id/legend_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/dimen_12"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:fontFamily="@font/open_sans_semibold"
+        android:maxLines="1"
+        android:textColor="@color/reporting_text_primary"
+        android:textSize="16sp"
+        tools:text="Marketing" />
+
+    <TextView
+        android:id="@+id/legend_amount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/dimen_12"
+        android:fontFamily="@font/open_sans_semibold"
+        android:textColor="@color/reporting_text_primary"
+        android:textSize="16sp"
+        tools:text="₹45.00" />
+
+</LinearLayout>
