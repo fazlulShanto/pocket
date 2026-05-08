@@ -15,7 +15,7 @@
         app:lottie_loop="true"
         app:lottie_rawRes="@raw/empty"
         app:lottie_repeatMode="restart"
-        tools:src="@drawable/ic_logo" />
+        tools:src="@mipmap/ic_logo" />
 
     <TextView
         android:id="@+id/empty_state_title"

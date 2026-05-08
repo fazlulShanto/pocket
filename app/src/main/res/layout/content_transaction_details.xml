@@ -200,7 +200,7 @@
             android:visibility="invisible"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/app_name_for_share"
-            app:srcCompat="@drawable/ic_logo" />
+            app:srcCompat="@mipmap/ic_logo" />
 
         <TextView
             android:id="@+id/app_name_for_share"
