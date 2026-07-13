@@ -79,6 +79,11 @@
     <string name="voice_status_ready_detail">Review the prefilled fields before saving.</string>
     <string name="voice_status_error_title">Voice entry failed</string>
     <string name="voice_permission_denied">Microphone permission is required for voice entry.</string>
+    <string name="voice_debug_view_details">View debug details</string>
+    <string name="voice_debug_dialog_title">Voice debug details (sensitive)</string>
+    <string name="voice_debug_copy">Copy</string>
+    <string name="voice_debug_close">Close</string>
+    <string name="voice_debug_copied">Voice debug details copied.</string>
     <string name="text_currency">Currency</string>
     <string name="text_ui_mode">Theme</string>
     <string name="text_total_income">Total Income</string>

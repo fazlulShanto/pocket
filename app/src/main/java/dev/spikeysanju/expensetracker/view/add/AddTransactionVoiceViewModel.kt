@@ -8,6 +8,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.spikeysanju.expensetracker.voice.audio.VoiceActivityDetector
 import dev.spikeysanju.expensetracker.voice.audio.WavWriter
 import dev.spikeysanju.expensetracker.voice.data.local.VoiceConfigStore
+import dev.spikeysanju.expensetracker.voice.debug.VoiceDebugTraceStore
 import dev.spikeysanju.expensetracker.voice.domain.VoiceTransactionOrchestrator
 import dev.spikeysanju.expensetracker.voice.model.VoiceExtractionContext
 import dev.spikeysanju.expensetracker.voice.model.VoiceProcessingStage
@@ -138,8 +139,17 @@ class AddTransactionVoiceViewModel @Inject constructor(
     }
 
     private fun handleSpeechDetected(audioData: ByteArray) {
+        VoiceDebugTraceStore.clear()
+        VoiceDebugTraceStore.append(
+            section = "VOICE CAPTURE",
+            details = "pcmByteCount=${audioData.size}\nsampleRate=${VoiceActivityDetector.SAMPLE_RATE}"
+        )
         _uiState.update { current ->
-            current.copy(stage = VoiceEntryStage.Transcribing, errorMessage = null)
+            current.copy(
+                stage = VoiceEntryStage.Transcribing,
+                errorMessage = null,
+                debugDetails = null
+            )
         }
         viewModelScope.launch {
             val context = pendingContext
@@ -175,7 +185,8 @@ class AddTransactionVoiceViewModel @Inject constructor(
                     stage = VoiceEntryStage.Ready,
                     transcript = result.transcript.rawText,
                     missingFields = result.draft.missingFields,
-                    tagHint = result.draft.tagHint
+                    tagHint = result.draft.tagHint,
+                    debugDetails = VoiceDebugTraceStore.snapshot().takeIf(String::isNotBlank)
                 )
                 _drafts.emit(result.draft)
                 if (result.draft.missingFields.isNotEmpty()) {
@@ -185,9 +196,14 @@ class AddTransactionVoiceViewModel @Inject constructor(
                 }
             } catch (error: Throwable) {
                 val message = error.message ?: "Voice processing failed."
+                VoiceDebugTraceStore.append(
+                    section = "VOICE FLOW ERROR",
+                    details = error.stackTraceToString()
+                )
                 _uiState.value = AddTransactionVoiceUiState(
                     stage = VoiceEntryStage.Error,
-                    errorMessage = message
+                    errorMessage = message,
+                    debugDetails = VoiceDebugTraceStore.snapshot().takeIf(String::isNotBlank)
                 )
                 _messages.emit(message)
             } finally {
@@ -217,7 +233,8 @@ data class AddTransactionVoiceUiState(
     val transcript: String? = null,
     val missingFields: List<String> = emptyList(),
     val tagHint: String? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val debugDetails: String? = null
 ) {
     val isWorking: Boolean
         get() = stage in setOf(

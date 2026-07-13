@@ -1,5 +1,6 @@
 package dev.spikeysanju.expensetracker.voice.data.remote
 
+import dev.spikeysanju.expensetracker.voice.debug.VoiceDebugTraceStore
 import dev.spikeysanju.expensetracker.voice.model.VoiceExtractionContext
 import java.io.File
 import kotlinx.coroutines.runBlocking
@@ -34,6 +35,7 @@ class GroqServiceTest {
 
     @Before
     fun setUp() {
+        VoiceDebugTraceStore.clear()
         server = MockWebServer()
         server.start()
         service = GroqService(
@@ -45,6 +47,7 @@ class GroqServiceTest {
     @After
     fun tearDown() {
         server.shutdown()
+        VoiceDebugTraceStore.clear()
     }
 
     @Test
@@ -71,6 +74,11 @@ class GroqServiceTest {
         assertFalse(body.has("tools"))
         assertFalse(body.has("reasoning_format"))
         assertFalse(body.has("reasoning_effort"))
+        val debugTrace = VoiceDebugTraceStore.snapshot()
+        assertTrue(debugTrace.contains("INITIAL LLM REQUEST"))
+        assertTrue(debugTrace.contains("INITIAL LLM RAW RESPONSE"))
+        assertTrue(debugTrace.contains("INITIAL PARSED TRANSACTION"))
+        assertFalse(debugTrace.contains("gsk_test"))
     }
 
     @Test
@@ -109,24 +117,34 @@ class GroqServiceTest {
 
         assertTrue(error.message.orEmpty().contains("after one correction attempt"))
         assertEquals(2, server.requestCount)
+        val debugTrace = VoiceDebugTraceStore.snapshot()
+        assertTrue(debugTrace.contains("INITIAL LLM RAW RESPONSE"))
+        assertTrue(debugTrace.contains("INITIAL PARSER ERROR"))
+        assertTrue(debugTrace.contains("CORRECTION LLM RAW RESPONSE"))
+        assertTrue(debugTrace.contains("CORRECTION PARSER ERROR"))
+        assertTrue(debugTrace.contains("bad one"))
+        assertTrue(debugTrace.contains("bad two"))
     }
 
     @Test
-    fun `model lookup encodes slash and validates returned id`() = runBlocking {
+    fun `model lookup lists models and validates namespaced id`() = runBlocking {
         server.enqueue(
             MockResponse().setResponseCode(200).setBody(
                 JSONObject()
-                    .put("id", "openai/gpt-oss-120b")
-                    .put("active", true)
+                    .put(
+                        "data",
+                        JSONArray().put(
+                            JSONObject()
+                                .put("id", "openai/gpt-oss-120b")
+                                .put("active", true)
+                        )
+                    )
                     .toString()
             )
         )
 
         assertTrue(service.testModelAccess("key", "openai/gpt-oss-120b"))
-        assertEquals(
-            "/openai/v1/models/openai%2Fgpt-oss-120b",
-            server.takeRequest().path
-        )
+        assertEquals("/openai/v1/models", server.takeRequest().path)
     }
 
     @Test
@@ -166,6 +184,12 @@ class GroqServiceTest {
         assertTrue(body.contains("name=\"response_format\""))
         assertTrue(body.contains("verbose_json"))
         assertTrue(body.contains("name=\"language\""))
+        val debugTrace = VoiceDebugTraceStore.snapshot()
+        assertTrue(debugTrace.contains("WHISPER REQUEST"))
+        assertTrue(debugTrace.contains("WHISPER RAW RESPONSE"))
+        assertTrue(debugTrace.contains("WHISPER PARSED TRANSCRIPT"))
+        assertTrue(debugTrace.contains("Lunch twelve"))
+        assertFalse(debugTrace.contains("Bearer key"))
     }
 
     @Test

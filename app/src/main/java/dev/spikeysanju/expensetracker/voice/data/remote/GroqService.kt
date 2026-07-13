@@ -5,6 +5,7 @@ import dev.spikeysanju.expensetracker.voice.domain.VoiceExtractionValidationExce
 import dev.spikeysanju.expensetracker.voice.domain.VoicePromptFactory
 import dev.spikeysanju.expensetracker.voice.domain.optDoubleOrNull
 import dev.spikeysanju.expensetracker.voice.domain.optStringOrNull
+import dev.spikeysanju.expensetracker.voice.debug.VoiceDebugTraceStore
 import dev.spikeysanju.expensetracker.voice.model.SpeechTranscript
 import dev.spikeysanju.expensetracker.voice.model.SpeechTranscriptSegment
 import dev.spikeysanju.expensetracker.voice.model.VoiceExtractionContext
@@ -42,6 +43,18 @@ class GroqService private constructor(
         requestedLanguageCode: String?,
         prompt: String
     ): SpeechTranscript = withContext(Dispatchers.IO) {
+        VoiceDebugTraceStore.append(
+            section = "WHISPER REQUEST",
+            details = buildString {
+                appendLine("model=$TRANSCRIPTION_MODEL_ID")
+                appendLine("fileName=${audioFile.name}")
+                appendLine("audioByteCount=${audioFile.length()}")
+                appendLine("language=${requestedLanguageCode ?: "auto-detect"}")
+                appendLine("temperature=0")
+                appendLine("responseFormat=verbose_json")
+                append("prompt=$prompt")
+            }
+        )
         val requestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("model", TRANSCRIPTION_MODEL_ID)
@@ -67,6 +80,7 @@ class GroqService private constructor(
             .build()
 
         val body = executeForBody(request, fallbackMessage = "Groq transcription failed.")
+        VoiceDebugTraceStore.append("WHISPER RAW RESPONSE", body)
         val root = JSONObject(body)
         val segmentsJson = root.optJSONArray("segments")
         val segments = mutableListOf<SpeechTranscriptSegment>()
@@ -84,6 +98,15 @@ class GroqService private constructor(
 
         val rawText = root.optStringOrNull("text")
             ?: throw VoiceApiException("Groq returned an empty transcript.")
+
+        VoiceDebugTraceStore.append(
+            section = "WHISPER PARSED TRANSCRIPT",
+            details = buildString {
+                appendLine("text=$rawText")
+                appendLine("detectedLanguage=${root.optStringOrNull("language") ?: "unknown"}")
+                append("durationSeconds=${root.optDoubleOrNull("duration") ?: "unknown"}")
+            }
+        )
 
         SpeechTranscript(
             rawText = rawText,
@@ -112,11 +135,22 @@ class GroqService private constructor(
         val initialMessages = JSONArray()
             .put(message("system", systemPrompt))
             .put(message("user", userPayload))
-        val initialBody = createChatCompletion(apiKey, modelId, initialMessages)
+        val initialBody = createChatCompletion(
+            apiKey = apiKey,
+            modelId = modelId,
+            messages = initialMessages,
+            attemptLabel = "INITIAL"
+        )
 
         try {
-            VoiceExtractionParser.parseResponse(initialBody, transcript, context)
+            VoiceExtractionParser.parseResponse(initialBody, transcript, context).also { extraction ->
+                VoiceDebugTraceStore.append("INITIAL PARSED TRANSACTION", extraction.toString())
+            }
         } catch (firstError: VoiceExtractionValidationException) {
+            VoiceDebugTraceStore.append(
+                section = "INITIAL PARSER ERROR",
+                details = firstError.message.orEmpty()
+            )
             val correctionMessages = JSONArray()
                 .put(message("system", systemPrompt))
                 .put(message("user", userPayload))
@@ -134,10 +168,21 @@ class GroqService private constructor(
                         VoicePromptFactory.buildExtractionCorrectionPrompt(firstError.message.orEmpty())
                     )
                 )
-            val correctedBody = createChatCompletion(apiKey, modelId, correctionMessages)
+            val correctedBody = createChatCompletion(
+                apiKey = apiKey,
+                modelId = modelId,
+                messages = correctionMessages,
+                attemptLabel = "CORRECTION"
+            )
             try {
-                VoiceExtractionParser.parseResponse(correctedBody, transcript, context)
+                VoiceExtractionParser.parseResponse(correctedBody, transcript, context).also { extraction ->
+                    VoiceDebugTraceStore.append("CORRECTED PARSED TRANSACTION", extraction.toString())
+                }
             } catch (secondError: VoiceExtractionValidationException) {
+                VoiceDebugTraceStore.append(
+                    section = "CORRECTION PARSER ERROR",
+                    details = secondError.message.orEmpty()
+                )
                 throw VoiceApiException(
                     "Groq returned invalid transaction data after one correction attempt: " +
                         secondError.message.orEmpty()
@@ -152,33 +197,44 @@ class GroqService private constructor(
                 return@withContext false
             }
             val request = Request.Builder()
-                .url(endpoint("models", modelId.trim()))
+                .url(endpoint("models"))
                 .header("Authorization", bearerToken(apiKey))
                 .get()
                 .build()
             val body = executeForBody(request, fallbackMessage = "Groq model test failed.")
             val root = JSONObject(body)
-            root.optStringOrNull("id")?.equals(modelId.trim(), ignoreCase = true) == true &&
-                root.optBoolean("active", true)
+            val models = root.optJSONArray("data") ?: return@withContext false
+            (0 until models.length()).any { index ->
+                val model = models.optJSONObject(index) ?: return@any false
+                model.optStringOrNull("id")?.equals(modelId.trim(), ignoreCase = true) == true &&
+                    model.optBoolean("active", true)
+            }
         }
 
     private fun createChatCompletion(
         apiKey: String,
         modelId: String,
-        messages: JSONArray
+        messages: JSONArray,
+        attemptLabel: String
     ): String {
         val requestJson = JSONObject()
             .put("model", modelId.trim())
             .put("stream", false)
             .put("temperature", 0)
             .put("messages", messages)
+        VoiceDebugTraceStore.append(
+            section = "$attemptLabel LLM REQUEST",
+            details = requestJson.toString(2)
+        )
         val request = Request.Builder()
             .url(endpoint("chat", "completions"))
             .header("Authorization", bearerToken(apiKey))
             .header("Content-Type", "application/json")
             .post(requestJson.toString().toRequestBody(JSON_MEDIA_TYPE))
             .build()
-        return executeForBody(request, fallbackMessage = "Groq extraction failed.")
+        return executeForBody(request, fallbackMessage = "Groq extraction failed.").also { body ->
+            VoiceDebugTraceStore.append("$attemptLabel LLM RAW RESPONSE", body)
+        }
     }
 
     private fun message(role: String, content: String): JSONObject {
@@ -197,6 +253,15 @@ class GroqService private constructor(
         okHttpClient.newCall(request).execute().use { response ->
             val body = response.body?.string().orEmpty()
             if (!response.isSuccessful) {
+                VoiceDebugTraceStore.append(
+                    section = "GROQ HTTP ERROR",
+                    details = buildString {
+                        appendLine("method=${request.method}")
+                        appendLine("url=${request.url}")
+                        appendLine("status=${response.code}")
+                        append("body=$body")
+                    }
+                )
                 throw VoiceApiException(
                     parseErrorMessage(
                         responseBody = body,

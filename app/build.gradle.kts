@@ -14,8 +14,8 @@ android {
         applicationId = "dev.spikeysanju.expensetracker"
         minSdk = 21
         targetSdk = 34
-        versionCode = 1
-        versionName = "v1.0.0-alpha01"
+        versionCode = 2
+        versionName = "v1.0.0-beta01"
 
         testInstrumentationRunner = "dev.spikeysanju.expensetracker.HiltTestRunner"
         vectorDrawables {

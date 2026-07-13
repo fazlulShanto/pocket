@@ -1,14 +1,20 @@
 package dev.spikeysanju.expensetracker.view.add
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.res.ColorStateList
 import android.content.pm.PackageManager
+import android.graphics.Typeface
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.ScrollView
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
@@ -19,6 +25,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import dev.spikeysanju.expensetracker.R
@@ -121,6 +128,9 @@ class AddTransactionFragment :
 
             addTransactionLayout.voiceInputButton.setOnTouchListener { view, event ->
                 handleVoiceButtonTouch(view, event)
+            }
+            addTransactionLayout.voiceDebugButton.setOnClickListener {
+                showVoiceDebugDetails(voiceViewModel.uiState.value.debugDetails.orEmpty())
             }
 
             btnSaveTransaction.setOnClickListener {
@@ -260,6 +270,7 @@ class AddTransactionFragment :
     }
 
     private fun renderVoiceState(state: AddTransactionVoiceUiState) = with(binding.addTransactionLayout) {
+        voiceDebugButton.isVisible = !state.debugDetails.isNullOrBlank()
         voiceStatusCard.strokeColor = ContextCompat.getColor(
             requireContext(),
             if (state.stage == VoiceEntryStage.Error) R.color.expense else R.color.background
@@ -335,6 +346,37 @@ class AddTransactionFragment :
         voiceInputButton.strokeColor = buttonStrokeColor
         voiceInputButton.setCardBackgroundColor(buttonBackgroundColor)
         voiceInputIcon.imageTintList = ColorStateList.valueOf(buttonIconColor)
+    }
+
+    private fun showVoiceDebugDetails(details: String) {
+        if (details.isBlank()) return
+
+        val padding = (16 * resources.displayMetrics.density).toInt()
+        val debugText = TextView(requireContext()).apply {
+            text = details
+            typeface = Typeface.MONOSPACE
+            textSize = 12f
+            setTextIsSelectable(true)
+            setPadding(padding, padding, padding, padding)
+        }
+        val scrollView = ScrollView(requireContext()).apply {
+            addView(debugText)
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.voice_debug_dialog_title)
+            .setView(scrollView)
+            .setNegativeButton(R.string.voice_debug_close, null)
+            .setPositiveButton(R.string.voice_debug_copy) { _, _ ->
+                val clipboard = requireContext()
+                    .getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(
+                    ClipData.newPlainText("Voice debug details", details)
+                )
+                Snackbar.make(binding.root, R.string.voice_debug_copied, Snackbar.LENGTH_SHORT)
+                    .show()
+            }
+            .show()
     }
 
     private fun buildTranscriptPreview(transcript: String): String {
