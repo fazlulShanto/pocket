@@ -42,7 +42,7 @@ data class MonthlyReportingCard(
 
 data class ReportingOverview(
     val allTime: ReportingPeriodSummary,
-    val latestMonth: MonthlyReportingCard?
+    val monthlyCards: List<MonthlyReportingCard>
 )
 
 private data class MonthKey(
@@ -137,7 +137,7 @@ fun buildReportingOverview(transactions: List<Transaction>): ReportingOverview {
             transactions = datedTransactions.map { it.transaction },
             categoryLimit = TOP_ALL_TIME_EXPENSE_CATEGORY_LIMIT
         ),
-        latestMonth = monthlyCards.firstOrNull()
+        monthlyCards = monthlyCards
     )
 }
 

@@ -49,7 +49,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/dimen_16"
                 app:cardBackgroundColor="@android:color/transparent"
-                app:cardCornerRadius="28dp"
+                app:cardCornerRadius="24dp"
                 app:cardElevation="0dp">
 
                 <LinearLayout
@@ -260,7 +260,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/dimen_24"
                 app:cardBackgroundColor="@color/surface"
-                app:cardCornerRadius="28dp"
+                app:cardCornerRadius="20dp"
                 app:cardElevation="0dp">
 
                 <LinearLayout

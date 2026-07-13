@@ -22,6 +22,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import dev.spikeysanju.expensetracker.R
 import dev.spikeysanju.expensetracker.databinding.FragmentReportingBinding
 import dev.spikeysanju.expensetracker.databinding.ItemReportingCategoryLegendBinding
+import dev.spikeysanju.expensetracker.databinding.ItemReportingMonthlyBreakdownBinding
 import dev.spikeysanju.expensetracker.databinding.ItemReportingMonthlyCategoryBinding
 import dev.spikeysanju.expensetracker.model.Transaction
 import dev.spikeysanju.expensetracker.utils.CategorySpending
@@ -97,7 +98,7 @@ class ReportingFragment : BaseFragment<FragmentReportingBinding, TransactionView
 		val reportingOverview = buildReportingOverview(transactions)
 		renderAllTimeCard(reportingOverview.allTime)
 		renderAllTimeCategories(reportingOverview.allTime.topExpenseCategories)
-		renderMonthlyBreakdown(reportingOverview.latestMonth)
+		renderMonthlyBreakdowns(reportingOverview.monthlyCards)
 	}
 
 	private fun renderAllTimeCard(summary: ReportingPeriodSummary) = with(binding) {
@@ -182,8 +183,10 @@ class ReportingFragment : BaseFragment<FragmentReportingBinding, TransactionView
 		allTimeCategoriesChart.invalidate()
 	}
 
-	private fun renderMonthlyBreakdown(monthlyCard: MonthlyReportingCard?) = with(binding) {
-		if (monthlyCard == null) {
+	private fun renderMonthlyBreakdowns(monthlyCards: List<MonthlyReportingCard>) = with(binding) {
+		monthlyBreakdownHistoryContainer.removeAllViews()
+		val latestMonthlyCard = monthlyCards.firstOrNull()
+		if (latestMonthlyCard == null) {
 			monthlyBreakdownContent.hide()
 			monthlyBreakdownEmptyState.show()
 			return
@@ -191,33 +194,60 @@ class ReportingFragment : BaseFragment<FragmentReportingBinding, TransactionView
 
 		monthlyBreakdownEmptyState.hide()
 		monthlyBreakdownContent.show()
-		monthlyBreakdownMonth.text = monthlyCard.monthLabel
-		monthlyIncomeValue.text = formatCurrencyAmount(monthlyCard.summary.totalIncome, selectedCurrency)
-		monthlyExpenseValue.text = formatCurrencyAmount(monthlyCard.summary.totalExpense, selectedCurrency)
-		monthlySavingsValue.text = formatCurrencyAmount(monthlyCard.summary.remaining, selectedCurrency)
+		monthlyBreakdownMonth.text = latestMonthlyCard.monthLabel
+		monthlyIncomeValue.text = formatCurrencyAmount(latestMonthlyCard.summary.totalIncome, selectedCurrency)
+		monthlyExpenseValue.text = formatCurrencyAmount(latestMonthlyCard.summary.totalExpense, selectedCurrency)
+		monthlySavingsValue.text = formatCurrencyAmount(latestMonthlyCard.summary.remaining, selectedCurrency)
 		renderMonthlyExpenseCategories(
-			categories = monthlyCard.summary.topExpenseCategories,
-			totalExpense = monthlyCard.summary.totalExpense
+			categories = latestMonthlyCard.summary.topExpenseCategories,
+			totalExpense = latestMonthlyCard.summary.totalExpense,
+			categoryContainer = monthlyCategoryContainer,
+			emptyState = monthlyCategoryEmptyState
 		)
+
+		monthlyCards.drop(1).forEach { monthlyCard ->
+			val cardBinding = ItemReportingMonthlyBreakdownBinding.inflate(
+				LayoutInflater.from(requireContext()),
+				monthlyBreakdownHistoryContainer,
+				false
+			)
+			cardBinding.monthlyBreakdownMonth.text = monthlyCard.monthLabel
+			cardBinding.monthlyIncomeValue.text =
+				formatCurrencyAmount(monthlyCard.summary.totalIncome, selectedCurrency)
+			cardBinding.monthlyExpenseValue.text =
+				formatCurrencyAmount(monthlyCard.summary.totalExpense, selectedCurrency)
+			cardBinding.monthlySavingsValue.text =
+				formatCurrencyAmount(monthlyCard.summary.remaining, selectedCurrency)
+			renderMonthlyExpenseCategories(
+				categories = monthlyCard.summary.topExpenseCategories,
+				totalExpense = monthlyCard.summary.totalExpense,
+				categoryContainer = cardBinding.monthlyCategoryContainer,
+				emptyState = cardBinding.monthlyCategoryEmptyState
+			)
+			monthlyBreakdownHistoryContainer.addView(cardBinding.root)
+		}
 	}
 
 	private fun renderMonthlyExpenseCategories(
 		categories: List<CategorySpending>,
-		totalExpense: Double
-	) = with(binding) {
-		monthlyCategoryContainer.removeAllViews()
+		totalExpense: Double,
+		categoryContainer: ViewGroup,
+		emptyState: View
+	) {
+		categoryContainer.removeAllViews()
 		if (categories.isEmpty()) {
-			monthlyCategoryEmptyState.show()
+			emptyState.show()
 			return
 		}
 
-		monthlyCategoryEmptyState.hide()
+		emptyState.hide()
 		categories.forEachIndexed { index, category ->
-			monthlyCategoryContainer.addView(
+			categoryContainer.addView(
 				createMonthlyCategoryRow(
 					category = category,
 					totalExpense = totalExpense,
-					color = resolveCategoryColor(index)
+					color = resolveCategoryColor(index),
+					parent = categoryContainer
 				)
 			)
 		}
@@ -244,11 +274,12 @@ class ReportingFragment : BaseFragment<FragmentReportingBinding, TransactionView
 	private fun createMonthlyCategoryRow(
 		category: CategorySpending,
 		totalExpense: Double,
-		color: Int
+		color: Int,
+		parent: ViewGroup
 	): View {
 		val rowBinding = ItemReportingMonthlyCategoryBinding.inflate(
 			LayoutInflater.from(requireContext()),
-			binding.monthlyCategoryContainer,
+			parent,
 			false
 		)
 		val progress = if (totalExpense <= 0.0 || category.amount <= 0.0) {

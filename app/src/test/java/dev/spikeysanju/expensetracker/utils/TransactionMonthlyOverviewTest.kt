@@ -2,14 +2,13 @@ package dev.spikeysanju.expensetracker.utils
 
 import dev.spikeysanju.expensetracker.model.Transaction
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 import java.util.Locale
 
 class TransactionMonthlyOverviewTest {
 
     @Test
-    fun `buildReportingOverview returns all-time top 5 categories and latest month breakdown`() {
+    fun `buildReportingOverview returns all-time top 5 categories and monthly breakdowns`() {
         val previousLocale = Locale.getDefault()
         Locale.setDefault(Locale.US)
 
@@ -37,7 +36,9 @@ class TransactionMonthlyOverviewTest {
                 overview.allTime.topExpenseCategories.map { it.tag }
             )
 
-            val latestMonth = overview.latestMonth
+            assertEquals(listOf("May 2026", "April 2026"), overview.monthlyCards.map { it.monthLabel })
+
+            val latestMonth = overview.monthlyCards.first()
             requireNotNull(latestMonth)
             assertEquals("May 2026", latestMonth.monthLabel)
             assertEquals(4000.0, latestMonth.summary.totalIncome, 0.0)
@@ -53,14 +54,34 @@ class TransactionMonthlyOverviewTest {
     }
 
     @Test
-    fun `buildReportingOverview returns empty latest month when there are no transactions`() {
+    fun `buildReportingOverview keeps May and June when July has no transactions`() {
+        val previousLocale = Locale.getDefault()
+        Locale.setDefault(Locale.US)
+
+        try {
+            val overview = buildReportingOverview(
+                listOf(
+                    transaction("May groceries", 500.0, "Expense", "Food", "10/05/2026"),
+                    transaction("June groceries", 970.0, "Expense", "Food", "12/06/2026")
+                )
+            )
+
+            assertEquals(listOf("June 2026", "May 2026"), overview.monthlyCards.map { it.monthLabel })
+            assertEquals(listOf(970.0, 500.0), overview.monthlyCards.map { it.summary.totalExpense })
+        } finally {
+            Locale.setDefault(previousLocale)
+        }
+    }
+
+    @Test
+    fun `buildReportingOverview returns empty monthly history when there are no transactions`() {
         val overview = buildReportingOverview(emptyList())
 
         assertEquals(0.0, overview.allTime.totalIncome, 0.0)
         assertEquals(0.0, overview.allTime.totalExpense, 0.0)
         assertEquals(0.0, overview.allTime.remaining, 0.0)
         assertEquals(emptyList<CategorySpending>(), overview.allTime.topExpenseCategories)
-        assertNull(overview.latestMonth)
+        assertEquals(emptyList<MonthlyReportingCard>(), overview.monthlyCards)
     }
 
     private fun transaction(

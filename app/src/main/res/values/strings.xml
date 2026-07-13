@@ -25,7 +25,7 @@
     <string name="text_reporting_categories">Total spending by category</string>
     <string name="text_reporting_empty">No data this month</string>
     <string name="text_reporting_history_subtitle">All-time Total</string>
-    <string name="text_reporting_subtitle">All-time totals and the latest monthly breakdown</string>
+    <string name="text_reporting_subtitle">All-time totals and monthly breakdown history</string>
     <string name="text_reporting_all_time">All time</string>
     <string name="text_reporting_all_time_total">All-Time Total</string>
     <string name="text_reporting_all_time_top_categories">All-Time Top Categories</string>
