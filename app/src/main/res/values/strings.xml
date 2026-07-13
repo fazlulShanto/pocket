@@ -38,6 +38,9 @@
     <string name="text_reporting_ranked_category">%1$d. %2$s</string>
     <string name="text_dashboard_overview">Overview</string>
     <string name="text_dashboard_vs_last_month">vs last month (%1$s)</string>
+    <string name="text_dashboard_total_income">Total\nIncome</string>
+    <string name="text_dashboard_total_expense">Total\nExpense</string>
+    <string name="text_dashboard_total_savings">Total\nSavings</string>
     <string name="text_settings_subtitle">Personalize the app and manage its tools in one place.</string>
     <string name="text_settings_section_preferences">Preferences</string>
     <string name="text_settings_section_tools">Tools</string>
@@ -81,6 +84,7 @@
     <string name="text_total_income">Total Income</string>
     <string name="text_total_expense">Total Expense</string>
     <string name="text_total_expenses">Total Expenses</string>
+    <string name="text_total_savings">Total Savings</string>
     <string name="text_total_balance">Total Balance</string>
     <string name="text_recent_transactions">Recent Transactions</string>
     <string name="text_view_all">View all</string>

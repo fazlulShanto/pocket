@@ -117,6 +117,12 @@ class DashboardFragment :
         overviewIncomeValue.text = formatCurrencyAmount(overview.totalIncome, selectedCurrency)
         overviewExpenseValue.text = formatCurrencyAmount(overview.totalExpense, selectedCurrency)
         overviewRemainingValue.text = formatCurrencyAmount(overview.remaining, selectedCurrency)
+        overviewRemainingValue.setTextColor(
+            ContextCompat.getColor(
+                requireContext(),
+                if (overview.remaining < 0) R.color.expense else R.color.blue_500
+            )
+        )
         overviewComparisonChip.text = formatPercentChange(overview)
         overviewComparisonLabel.text = getString(
             R.string.text_dashboard_vs_last_month,
