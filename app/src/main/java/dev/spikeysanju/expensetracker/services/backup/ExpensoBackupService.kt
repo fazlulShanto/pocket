@@ -12,6 +12,7 @@ import dev.spikeysanju.expensetracker.model.Tag
 import dev.spikeysanju.expensetracker.model.Transaction
 import dev.spikeysanju.expensetracker.utils.SupportedCurrency
 import dev.spikeysanju.expensetracker.voice.data.local.VoiceConfigStore
+import dev.spikeysanju.expensetracker.voice.model.GroqReasoningModels
 import dev.spikeysanju.expensetracker.voice.model.VoiceSettingsConfig
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
@@ -92,16 +93,14 @@ class ExpensoBackupService @Inject constructor(
             replaceDatabase(document)
             applyPreferences(
                 preferences = document.preferences,
-                localVoiceConfig = previousVoiceConfig,
-                resetModelRefresh = true
+                localVoiceConfig = previousVoiceConfig
             )
         } catch (restoreError: Exception) {
             val databaseRollback = runCatching { replaceDatabase(previousDocument) }
             val preferencesRollback = runCatching {
                 applyPreferences(
                     preferences = previousDocument.preferences,
-                    localVoiceConfig = previousVoiceConfig,
-                    resetModelRefresh = false
+                    localVoiceConfig = previousVoiceConfig
                 )
             }
             if (databaseRollback.isFailure || preferencesRollback.isFailure) {
@@ -161,9 +160,10 @@ class ExpensoBackupService @Inject constructor(
                 currencyCode = currency.code,
                 darkMode = darkMode,
                 reasoningModelId = voiceConfig.reasoningModelId,
-                reasoningModelLabel = voiceConfig.reasoningModelLabel,
+                reasoningModelLabel = GroqReasoningModels.displayLabel(voiceConfig.reasoningModelId),
                 speechLanguageCode = voiceConfig.speechLanguageCode,
-                speechLanguageLabel = voiceConfig.speechLanguageLabel
+                speechLanguageLabel = voiceConfig.speechLanguageLabel,
+                reasoningProvider = GroqReasoningModels.PROVIDER_ID
             )
         )
     }
@@ -207,8 +207,7 @@ class ExpensoBackupService @Inject constructor(
 
     private suspend fun applyPreferences(
         preferences: BackupPreferences,
-        localVoiceConfig: VoiceSettingsConfig,
-        resetModelRefresh: Boolean
+        localVoiceConfig: VoiceSettingsConfig
     ) {
         uiModeDataStore.saveToDataStore(preferences.darkMode)
         currencyPreference.saveSelectedCurrency(
@@ -216,15 +215,18 @@ class ExpensoBackupService @Inject constructor(
         )
         voiceConfigStore.saveConfig(
             localVoiceConfig.copy(
-                reasoningModelId = preferences.reasoningModelId,
-                reasoningModelLabel = preferences.reasoningModelLabel,
-                speechLanguageCode = preferences.speechLanguageCode,
-                speechLanguageLabel = preferences.speechLanguageLabel,
-                lastModelRefreshAt = if (resetModelRefresh) {
-                    null
+                reasoningModelId = if (
+                    preferences.reasoningProvider == GroqReasoningModels.PROVIDER_ID
+                ) {
+                    preferences.reasoningModelId
+                        ?.trim()
+                        ?.takeIf(String::isNotEmpty)
+                        ?: GroqReasoningModels.DEFAULT_MODEL_ID
                 } else {
-                    localVoiceConfig.lastModelRefreshAt
-                }
+                    GroqReasoningModels.DEFAULT_MODEL_ID
+                },
+                speechLanguageCode = preferences.speechLanguageCode,
+                speechLanguageLabel = preferences.speechLanguageLabel
             )
         )
     }

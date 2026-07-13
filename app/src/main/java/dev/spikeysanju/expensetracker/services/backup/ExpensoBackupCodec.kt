@@ -57,6 +57,7 @@ class ExpensoBackupCodec @Inject constructor() {
                     .put(KEY_DARK_MODE, document.preferences.darkMode)
                     .putNullable(KEY_REASONING_MODEL_ID, document.preferences.reasoningModelId)
                     .putNullable(KEY_REASONING_MODEL_LABEL, document.preferences.reasoningModelLabel)
+                    .putNullable(KEY_REASONING_PROVIDER, document.preferences.reasoningProvider)
                     .putNullable(KEY_SPEECH_LANGUAGE_CODE, document.preferences.speechLanguageCode)
                     .put(KEY_SPEECH_LANGUAGE_LABEL, document.preferences.speechLanguageLabel)
             )
@@ -114,7 +115,8 @@ class ExpensoBackupCodec @Inject constructor() {
                         reasoningModelId = preferences.nullableString(KEY_REASONING_MODEL_ID),
                         reasoningModelLabel = preferences.nullableString(KEY_REASONING_MODEL_LABEL),
                         speechLanguageCode = preferences.nullableString(KEY_SPEECH_LANGUAGE_CODE),
-                        speechLanguageLabel = preferences.getString(KEY_SPEECH_LANGUAGE_LABEL)
+                        speechLanguageLabel = preferences.getString(KEY_SPEECH_LANGUAGE_LABEL),
+                        reasoningProvider = preferences.nullableString(KEY_REASONING_PROVIDER)
                     )
                 }
             )
@@ -176,6 +178,13 @@ class ExpensoBackupCodec @Inject constructor() {
         }
         validateOptionalText(document.preferences.reasoningModelId, "reasoning model ID")
         validateOptionalText(document.preferences.reasoningModelLabel, "reasoning model label")
+        validateOptionalText(document.preferences.reasoningProvider, "reasoning provider")
+        requireBackup(
+            document.preferences.reasoningProvider == null ||
+                document.preferences.reasoningProvider == GROQ_PROVIDER
+        ) {
+            "The backup reasoning provider is not supported."
+        }
         validateOptionalText(document.preferences.speechLanguageCode, "speech language code")
     }
 
@@ -252,10 +261,12 @@ class ExpensoBackupCodec @Inject constructor() {
         const val KEY_DARK_MODE = "darkMode"
         const val KEY_REASONING_MODEL_ID = "reasoningModelId"
         const val KEY_REASONING_MODEL_LABEL = "reasoningModelLabel"
+        const val KEY_REASONING_PROVIDER = "reasoningProvider"
         const val KEY_SPEECH_LANGUAGE_CODE = "speechLanguageCode"
         const val KEY_SPEECH_LANGUAGE_LABEL = "speechLanguageLabel"
         const val INCOME = "Income"
         const val EXPENSE = "Expense"
+        const val GROQ_PROVIDER = "groq"
         val CURRENCIES = setOf("USD", "GBP", "EUR", "CNY", "BDT")
     }
 }

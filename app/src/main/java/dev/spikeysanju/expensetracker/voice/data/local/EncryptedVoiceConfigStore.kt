@@ -29,10 +29,18 @@ class EncryptedVoiceConfigStore @Inject constructor(
         val snapshot = VoiceConfigPreferencesMapper.allKeys.associateWith { key ->
             sharedPreferences.getString(key, null)
         }
-        VoiceConfigPreferencesMapper.fromPreferenceSnapshot(snapshot)
+        VoiceConfigPreferencesMapper.fromPreferenceSnapshot(snapshot).also { config ->
+            if (VoiceConfigPreferencesMapper.requiresMigration(snapshot)) {
+                writeConfig(config)
+            }
+        }
     }
 
     override suspend fun saveConfig(config: VoiceSettingsConfig) = withContext(Dispatchers.IO) {
+        writeConfig(config)
+    }
+
+    private fun writeConfig(config: VoiceSettingsConfig) {
         val snapshot = VoiceConfigPreferencesMapper.toPreferenceSnapshot(config)
         sharedPreferences.edit().apply {
             VoiceConfigPreferencesMapper.allKeys.forEach(::remove)

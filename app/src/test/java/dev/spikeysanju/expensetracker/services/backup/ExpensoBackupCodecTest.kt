@@ -2,6 +2,7 @@ package dev.spikeysanju.expensetracker.services.backup
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -21,6 +22,7 @@ class ExpensoBackupCodecTest {
         assertTrue(json.contains("Expenso backup \uD83D\uDCB0"))
         assertFalse(json.contains("groqApiKey"))
         assertFalse(json.contains("openRouterApiKey"))
+        assertTrue(json.contains("\"reasoningProvider\":\"groq\""))
     }
 
     @Test
@@ -30,6 +32,16 @@ class ExpensoBackupCodecTest {
         }
 
         assertTrue(error.message.orEmpty().contains("not valid JSON"))
+    }
+
+    @Test
+    fun `decode accepts legacy backup without reasoning provider`() {
+        val root = org.json.JSONObject(codec.encode(sampleDocument()))
+        root.getJSONObject("preferences").remove("reasoningProvider")
+
+        val restored = codec.decode(root.toString())
+
+        assertNull(restored.preferences.reasoningProvider)
     }
 
     @Test
@@ -110,10 +122,11 @@ class ExpensoBackupCodecTest {
         preferences = BackupPreferences(
             currencyCode = "BDT",
             darkMode = true,
-            reasoningModelId = "openai/gpt-5-mini",
-            reasoningModelLabel = "GPT-5 mini",
+            reasoningModelId = "custom/groq-model",
+            reasoningModelLabel = "custom/groq-model",
             speechLanguageCode = "bn-BD",
-            speechLanguageLabel = "Bangla (Bangladesh)"
+            speechLanguageLabel = "Bangla (Bangladesh)",
+            reasoningProvider = "groq"
         )
     )
 }

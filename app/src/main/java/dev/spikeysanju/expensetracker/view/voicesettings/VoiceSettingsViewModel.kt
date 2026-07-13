@@ -4,9 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.spikeysanju.expensetracker.voice.data.local.VoiceConfigStore
-import dev.spikeysanju.expensetracker.voice.data.remote.OpenRouterService
-import dev.spikeysanju.expensetracker.voice.domain.VoiceConnectionTester
-import dev.spikeysanju.expensetracker.voice.model.OpenRouterModelOption
+import dev.spikeysanju.expensetracker.voice.data.remote.GroqService
+import dev.spikeysanju.expensetracker.voice.model.GroqReasoningModels
 import dev.spikeysanju.expensetracker.voice.model.SupportedSpeechLanguage
 import dev.spikeysanju.expensetracker.voice.model.VoiceSettingsConfig
 import javax.inject.Inject
@@ -21,8 +20,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class VoiceSettingsViewModel @Inject constructor(
     private val voiceConfigStore: VoiceConfigStore,
-    private val openRouterService: OpenRouterService,
-    private val voiceConnectionTester: VoiceConnectionTester
+    private val groqService: GroqService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(VoiceSettingsUiState())
@@ -36,37 +34,32 @@ class VoiceSettingsViewModel @Inject constructor(
     }
 
     fun onGroqApiKeyChanged(value: String) {
-        _uiState.update { current ->
-            current.copy(groqApiKey = value)
-        }
+        _uiState.update { current -> current.copy(groqApiKey = value) }
     }
 
-    fun onOpenRouterApiKeyChanged(value: String) {
-        _uiState.update { current ->
-            current.copy(openRouterApiKey = value)
-        }
+    fun onReasoningModelChanged(value: String) {
+        _uiState.update { current -> current.copy(selectedModelId = value) }
     }
 
     fun onSpeechLanguageSelected(language: SupportedSpeechLanguage) {
-        _uiState.update { current ->
-            current.copy(selectedSpeechLanguage = language)
-        }
-    }
-
-    fun onReasoningModelSelected(model: OpenRouterModelOption?) {
-        _uiState.update { current ->
-            current.copy(
-                selectedModelId = model?.id,
-                selectedModelLabel = model?.label
-            )
-        }
+        _uiState.update { current -> current.copy(selectedSpeechLanguage = language) }
     }
 
     fun saveSettings() {
+        val config = _uiState.value.asConfig()
+        val missingRequirements = config.missingRequirements()
+        if (missingRequirements.isNotEmpty()) {
+            _messages.tryEmit(
+                "Voice settings are incomplete: " +
+                    missingRequirements.joinToString(separator = ", ") +
+                    "."
+            )
+            return
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true) }
             try {
-                voiceConfigStore.saveConfig(_uiState.value.asConfig())
+                voiceConfigStore.saveConfig(config)
                 _messages.emit("Voice settings saved.")
             } catch (error: Throwable) {
                 _messages.emit(error.message ?: "Failed to save voice settings.")
@@ -76,72 +69,31 @@ class VoiceSettingsViewModel @Inject constructor(
         }
     }
 
-    fun refreshModels() {
-        val apiKey = _uiState.value.openRouterApiKey.trim()
-        if (apiKey.isBlank()) {
-            _messages.tryEmit("Add an OpenRouter API key before refreshing models.")
-            return
-        }
-
-        viewModelScope.launch {
-            _uiState.update { it.copy(isRefreshingModels = true) }
-            try {
-                val refreshedModels = openRouterService.fetchCompatibleModels(apiKey)
-                val previousSelectionId = _uiState.value.selectedModelId
-                val preservedSelection = refreshedModels.firstOrNull { model ->
-                    model.matchesSelection(previousSelectionId)
-                }
-                val refreshedAt = System.currentTimeMillis()
-                _uiState.update { current ->
-                    current.copy(
-                        availableModels = refreshedModels,
-                        selectedModelId = preservedSelection?.id,
-                        selectedModelLabel = preservedSelection?.label,
-                        lastModelRefreshAt = refreshedAt
-                    )
-                }
-                voiceConfigStore.saveConfig(_uiState.value.asConfig())
-
-                if (refreshedModels.isEmpty()) {
-                    _messages.emit("No compatible structured-output models were returned by OpenRouter.")
-                } else if (previousSelectionId != null && preservedSelection == null) {
-                    _messages.emit("The previously selected model is no longer compatible. Choose a new model.")
-                } else {
-                    _messages.emit("Refreshed ${refreshedModels.size} compatible models.")
-                }
-            } catch (error: Throwable) {
-                _messages.emit(error.message ?: "Failed to refresh OpenRouter models.")
-            } finally {
-                _uiState.update { it.copy(isRefreshingModels = false) }
-            }
-        }
-    }
-
-    fun testConnections() {
+    fun testConnection() {
         val currentState = _uiState.value
-        if (currentState.groqApiKey.isBlank() || currentState.openRouterApiKey.isBlank()) {
-            _messages.tryEmit("Add both API keys before testing the voice connections.")
+        if (currentState.groqApiKey.isBlank() || currentState.selectedModelId.isBlank()) {
+            _messages.tryEmit("Add a Groq API key and model ID before testing the connection.")
             return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isTestingConnections = true) }
+            _uiState.update { it.copy(isTestingConnection = true) }
             try {
-                val result = voiceConnectionTester.testConnections(
-                    groqApiKey = currentState.groqApiKey,
-                    openRouterApiKey = currentState.openRouterApiKey
+                val accessible = groqService.testModelAccess(
+                    apiKey = currentState.groqApiKey,
+                    modelId = currentState.selectedModelId
                 )
-                val message = when {
-                    result.isSuccessful -> "Groq and OpenRouter are reachable with the current keys."
-                    result.groqReachable -> "Groq is reachable, but OpenRouter rejected the current key."
-                    result.openRouterReachable -> "OpenRouter is reachable, but Groq rejected the current key."
-                    else -> "Both voice providers rejected the current keys."
-                }
-                _messages.emit(message)
+                _messages.emit(
+                    if (accessible) {
+                        "Groq is reachable and the selected model is available."
+                    } else {
+                        "Groq returned unexpected details for the selected model."
+                    }
+                )
             } catch (error: Throwable) {
-                _messages.emit(error.message ?: "Voice connection test failed.")
+                _messages.emit(error.message ?: "Groq connection test failed.")
             } finally {
-                _uiState.update { it.copy(isTestingConnections = false) }
+                _uiState.update { it.copy(isTestingConnection = false) }
             }
         }
     }
@@ -153,11 +105,8 @@ class VoiceSettingsViewModel @Inject constructor(
                 _uiState.value = VoiceSettingsUiState(
                     isLoading = false,
                     groqApiKey = config.groqApiKey,
-                    openRouterApiKey = config.openRouterApiKey,
                     selectedModelId = config.reasoningModelId,
-                    selectedModelLabel = config.reasoningModelLabel,
-                    selectedSpeechLanguage = config.selectedSpeechLanguage(),
-                    lastModelRefreshAt = config.lastModelRefreshAt
+                    selectedSpeechLanguage = config.selectedSpeechLanguage()
                 )
             } catch (error: Throwable) {
                 _uiState.value = _uiState.value.copy(isLoading = false)
@@ -170,28 +119,20 @@ class VoiceSettingsViewModel @Inject constructor(
 data class VoiceSettingsUiState(
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
-    val isRefreshingModels: Boolean = false,
-    val isTestingConnections: Boolean = false,
+    val isTestingConnection: Boolean = false,
     val groqApiKey: String = "",
-    val openRouterApiKey: String = "",
-    val availableModels: List<OpenRouterModelOption> = emptyList(),
-    val selectedModelId: String? = null,
-    val selectedModelLabel: String? = null,
-    val selectedSpeechLanguage: SupportedSpeechLanguage = SupportedSpeechLanguage.AUTO_DETECT,
-    val lastModelRefreshAt: Long? = null
+    val selectedModelId: String = GroqReasoningModels.DEFAULT_MODEL_ID,
+    val selectedSpeechLanguage: SupportedSpeechLanguage = SupportedSpeechLanguage.AUTO_DETECT
 ) {
     val isBusy: Boolean
-        get() = isLoading || isSaving || isRefreshingModels || isTestingConnections
+        get() = isLoading || isSaving || isTestingConnection
 
     fun asConfig(): VoiceSettingsConfig {
         return VoiceSettingsConfig(
             groqApiKey = groqApiKey,
-            openRouterApiKey = openRouterApiKey,
             reasoningModelId = selectedModelId,
-            reasoningModelLabel = selectedModelLabel,
             speechLanguageCode = selectedSpeechLanguage.code,
-            speechLanguageLabel = selectedSpeechLanguage.label,
-            lastModelRefreshAt = lastModelRefreshAt
+            speechLanguageLabel = selectedSpeechLanguage.label
         )
     }
 }

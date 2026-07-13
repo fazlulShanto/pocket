@@ -1,7 +1,6 @@
 package dev.spikeysanju.expensetracker.voice.domain
 
-import dev.spikeysanju.expensetracker.voice.data.remote.GroqWhisperService
-import dev.spikeysanju.expensetracker.voice.data.remote.OpenRouterService
+import dev.spikeysanju.expensetracker.voice.data.remote.GroqService
 import dev.spikeysanju.expensetracker.voice.model.VoiceExtractionContext
 import dev.spikeysanju.expensetracker.voice.model.VoiceProcessingStage
 import dev.spikeysanju.expensetracker.voice.model.VoiceSettingsConfig
@@ -12,8 +11,7 @@ import javax.inject.Singleton
 
 @Singleton
 class VoiceTransactionOrchestrator @Inject constructor(
-    private val groqWhisperService: GroqWhisperService,
-    private val openRouterService: OpenRouterService,
+    private val groqService: GroqService,
     private val voiceDraftMapper: VoiceDraftMapper
 ) {
     suspend fun createDraft(
@@ -35,7 +33,7 @@ class VoiceTransactionOrchestrator @Inject constructor(
             speechLanguageLabel = selectedSpeechLanguage.label
         )
         onStageChanged(VoiceProcessingStage.Transcribing)
-        val transcript = groqWhisperService.transcribe(
+        val transcript = groqService.transcribe(
             apiKey = config.groqApiKey,
             audioFile = audioFile,
             requestedLanguageCode = selectedSpeechLanguage.code,
@@ -46,9 +44,9 @@ class VoiceTransactionOrchestrator @Inject constructor(
             )
         )
         onStageChanged(VoiceProcessingStage.Parsing)
-        val extraction = openRouterService.extractTransaction(
-            apiKey = config.openRouterApiKey,
-            modelId = config.reasoningModelId.orEmpty(),
+        val extraction = groqService.extractTransaction(
+            apiKey = config.groqApiKey,
+            modelId = config.reasoningModelId,
             transcript = transcript.rawText,
             context = extractionContext
         ).copy(rawTranscript = transcript.rawText)

@@ -40,7 +40,8 @@ data class BackupPreferences(
     val reasoningModelId: String?,
     val reasoningModelLabel: String?,
     val speechLanguageCode: String?,
-    val speechLanguageLabel: String
+    val speechLanguageLabel: String,
+    val reasoningProvider: String? = null
 )
 
 data class RestorePreview(

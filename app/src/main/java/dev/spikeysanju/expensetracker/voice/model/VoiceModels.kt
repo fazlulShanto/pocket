@@ -1,35 +1,24 @@
 package dev.spikeysanju.expensetracker.voice.model
 
-data class OpenRouterModelOption(
-    val id: String,
-    val label: String,
-    val description: String?,
-    val promptPrice: String?,
-    val completionPrice: String?,
-    val contextLength: Int?,
-    val supportsStructuredOutputs: Boolean,
-    val supportsResponseFormat: Boolean,
-    val isFree: Boolean
-) {
-    fun matchesSelection(modelId: String?): Boolean {
-        return id.equals(modelId, ignoreCase = true)
-    }
+object GroqReasoningModels {
+    const val PROVIDER_ID = "groq"
+    const val DEFAULT_MODEL_ID = "openai/gpt-oss-120b"
 
-    override fun toString(): String {
-        return "$label ($id)"
-    }
+    val suggestedModelIds = listOf(
+        DEFAULT_MODEL_ID,
+        "qwen/qwen3.6-27b",
+        "qwen/qwen3-32b",
+        "llama-3.3-70b-versatile"
+    )
 
-    fun displaySubtitle(): String {
-        val price = when {
-            isFree -> "Free"
-            !promptPrice.isNullOrBlank() || !completionPrice.isNullOrBlank() -> {
-                "Prompt ${promptPrice ?: "-"} • Completion ${completionPrice ?: "-"}"
-            }
-            else -> null
+    fun displayLabel(modelId: String): String {
+        return when (modelId) {
+            DEFAULT_MODEL_ID -> "GPT-OSS 120B"
+            "qwen/qwen3.6-27b" -> "Qwen 3.6 27B"
+            "qwen/qwen3-32b" -> "Qwen 3 32B"
+            "llama-3.3-70b-versatile" -> "Llama 3.3 70B Versatile"
+            else -> modelId
         }
-        val context = contextLength?.let { "Context $it" }
-        return listOfNotNull(description?.takeIf { it.isNotBlank() }, price, context)
-            .joinToString(separator = " • ")
     }
 }
 
@@ -88,14 +77,6 @@ data class VoiceTransactionResult(
     val extraction: VoiceTransactionExtraction,
     val draft: VoiceTransactionDraft
 )
-
-data class VoiceConnectionTestResult(
-    val groqReachable: Boolean,
-    val openRouterReachable: Boolean
-) {
-    val isSuccessful: Boolean
-        get() = groqReachable && openRouterReachable
-}
 
 enum class VoiceProcessingStage {
     Transcribing,

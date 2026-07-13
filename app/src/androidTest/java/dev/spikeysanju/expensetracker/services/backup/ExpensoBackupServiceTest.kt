@@ -13,6 +13,7 @@ import dev.spikeysanju.expensetracker.model.Tag
 import dev.spikeysanju.expensetracker.model.Transaction
 import dev.spikeysanju.expensetracker.utils.SupportedCurrency
 import dev.spikeysanju.expensetracker.voice.data.local.VoiceConfigStore
+import dev.spikeysanju.expensetracker.voice.model.GroqReasoningModels
 import dev.spikeysanju.expensetracker.voice.model.VoiceSettingsConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,10 +47,7 @@ class ExpensoBackupServiceTest {
         voiceConfigStore = FakeVoiceConfigStore(
             VoiceSettingsConfig(
                 groqApiKey = "local-groq-secret",
-                openRouterApiKey = "local-openrouter-secret",
-                reasoningModelId = "old-model",
-                reasoningModelLabel = "Old model",
-                lastModelRefreshAt = 1234
+                reasoningModelId = "old-model"
             )
         )
         service = ExpensoBackupService(
@@ -106,9 +104,7 @@ class ExpensoBackupServiceTest {
         assertEquals(SupportedCurrency.USD, currencyPreference.current.value)
         assertEquals(true, uiMode.current.value)
         assertEquals("local-groq-secret", voiceConfigStore.config.groqApiKey)
-        assertEquals("local-openrouter-secret", voiceConfigStore.config.openRouterApiKey)
         assertEquals("new-model", voiceConfigStore.config.reasoningModelId)
-        assertNull(voiceConfigStore.config.lastModelRefreshAt)
     }
 
     @Test
@@ -127,6 +123,27 @@ class ExpensoBackupServiceTest {
     }
 
     @Test
+    fun legacyBackupResetsOpenRouterModelToGroqDefault() = runBlocking {
+        val legacyBackup = replacementBackup().let { backup ->
+            backup.copy(
+                preferences = backup.preferences.copy(
+                    reasoningModelId = "legacy/openrouter-model",
+                    reasoningModelLabel = "Legacy model",
+                    reasoningProvider = null
+                )
+            )
+        }
+
+        service.restore(legacyBackup)
+
+        assertEquals(
+            GroqReasoningModels.DEFAULT_MODEL_ID,
+            voiceConfigStore.config.reasoningModelId
+        )
+        assertEquals("local-groq-secret", voiceConfigStore.config.groqApiKey)
+    }
+
+    @Test
     fun preferenceFailureRestoresThePreviousDatabaseAndPreferences() = runBlocking {
         voiceConfigStore.failNextSave = true
 
@@ -139,7 +156,6 @@ class ExpensoBackupServiceTest {
         assertEquals(SupportedCurrency.BDT, currencyPreference.current.value)
         assertEquals(false, uiMode.current.value)
         assertEquals("old-model", voiceConfigStore.config.reasoningModelId)
-        assertEquals(1234L, voiceConfigStore.config.lastModelRefreshAt)
     }
 
     @Test
@@ -186,7 +202,8 @@ class ExpensoBackupServiceTest {
             reasoningModelId = "new-model",
             reasoningModelLabel = "New model",
             speechLanguageCode = null,
-            speechLanguageLabel = "Auto detect"
+            speechLanguageLabel = "Auto detect",
+            reasoningProvider = GroqReasoningModels.PROVIDER_ID
         )
     )
 

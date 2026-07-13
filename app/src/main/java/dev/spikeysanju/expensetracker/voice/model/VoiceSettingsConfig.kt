@@ -2,12 +2,9 @@ package dev.spikeysanju.expensetracker.voice.model
 
 data class VoiceSettingsConfig(
     val groqApiKey: String = "",
-    val openRouterApiKey: String = "",
-    val reasoningModelId: String? = null,
-    val reasoningModelLabel: String? = null,
+    val reasoningModelId: String = GroqReasoningModels.DEFAULT_MODEL_ID,
     val speechLanguageCode: String? = null,
-    val speechLanguageLabel: String = SupportedSpeechLanguage.AUTO_DETECT.label,
-    val lastModelRefreshAt: Long? = null
+    val speechLanguageLabel: String = SupportedSpeechLanguage.AUTO_DETECT.label
 ) {
     fun selectedSpeechLanguage(): SupportedSpeechLanguage {
         return SupportedSpeechLanguage.fromCodeOrLabel(speechLanguageCode, speechLanguageLabel)
@@ -15,8 +12,7 @@ data class VoiceSettingsConfig(
 
     fun canStartVoiceEntry(): Boolean {
         return groqApiKey.isNotBlank() &&
-            openRouterApiKey.isNotBlank() &&
-            !reasoningModelId.isNullOrBlank()
+            reasoningModelId.isNotBlank()
     }
 
     fun missingRequirements(): List<String> {
@@ -24,10 +20,7 @@ data class VoiceSettingsConfig(
         if (groqApiKey.isBlank()) {
             missing += "Groq API key"
         }
-        if (openRouterApiKey.isBlank()) {
-            missing += "OpenRouter API key"
-        }
-        if (reasoningModelId.isNullOrBlank()) {
+        if (reasoningModelId.isBlank()) {
             missing += "reasoning model"
         }
         return missing

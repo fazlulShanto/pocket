@@ -1,34 +1,50 @@
 package dev.spikeysanju.expensetracker.voice.data.local
 
+import dev.spikeysanju.expensetracker.voice.model.GroqReasoningModels
 import dev.spikeysanju.expensetracker.voice.model.VoiceSettingsConfig
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VoiceConfigPreferencesMapperTest {
     @Test
-    fun `preference snapshot round trip preserves voice settings`() {
+    fun `groq preference snapshot preserves an arbitrary model`() {
         val config = VoiceSettingsConfig(
             groqApiKey = "groq-key",
-            openRouterApiKey = "openrouter-key",
-            reasoningModelId = "openrouter/model-a",
-            reasoningModelLabel = "Model A",
+            reasoningModelId = "custom/model-id",
             speechLanguageCode = "bn",
-            speechLanguageLabel = "Bangla",
-            lastModelRefreshAt = 1_715_171_717_000
+            speechLanguageLabel = "Bangla"
         )
 
-        val restored = VoiceConfigPreferencesMapper.fromPreferenceSnapshot(
-            VoiceConfigPreferencesMapper.toPreferenceSnapshot(config)
+        val snapshot = VoiceConfigPreferencesMapper.toPreferenceSnapshot(config)
+        val restored = VoiceConfigPreferencesMapper.fromPreferenceSnapshot(snapshot)
+
+        assertEquals(config, restored)
+        assertEquals("groq", snapshot[VoiceConfigPreferencesMapper.KEY_REASONING_PROVIDER])
+        assertFalse(VoiceConfigPreferencesMapper.requiresMigration(snapshot))
+    }
+
+    @Test
+    fun `legacy openrouter snapshot keeps groq key and language but resets model`() {
+        val snapshot = mapOf(
+            VoiceConfigPreferencesMapper.KEY_GROQ_API_KEY to "groq-key",
+            VoiceConfigPreferencesMapper.KEY_OPEN_ROUTER_API_KEY to "old-openrouter-key",
+            VoiceConfigPreferencesMapper.KEY_REASONING_MODEL_ID to "openrouter/model",
+            VoiceConfigPreferencesMapper.KEY_REASONING_MODEL_LABEL to "Old model",
+            VoiceConfigPreferencesMapper.KEY_SPEECH_LANGUAGE_CODE to "bn",
+            VoiceConfigPreferencesMapper.KEY_SPEECH_LANGUAGE_LABEL to "Bangla"
         )
 
-        assertEquals(config.groqApiKey, restored.groqApiKey)
-        assertEquals(config.openRouterApiKey, restored.openRouterApiKey)
-        assertEquals(config.reasoningModelId, restored.reasoningModelId)
-        assertEquals(config.reasoningModelLabel, restored.reasoningModelLabel)
-        assertEquals(config.speechLanguageCode, restored.speechLanguageCode)
-        assertEquals(config.speechLanguageLabel, restored.speechLanguageLabel)
-        assertEquals(config.lastModelRefreshAt, restored.lastModelRefreshAt)
+        val restored = VoiceConfigPreferencesMapper.fromPreferenceSnapshot(snapshot)
+
+        assertEquals("groq-key", restored.groqApiKey)
+        assertEquals(GroqReasoningModels.DEFAULT_MODEL_ID, restored.reasoningModelId)
+        assertEquals("bn", restored.speechLanguageCode)
+        assertTrue(VoiceConfigPreferencesMapper.requiresMigration(snapshot))
+        val migrated = VoiceConfigPreferencesMapper.toPreferenceSnapshot(restored)
+        assertNull(migrated[VoiceConfigPreferencesMapper.KEY_OPEN_ROUTER_API_KEY])
     }
 
     @Test
@@ -36,9 +52,8 @@ class VoiceConfigPreferencesMapperTest {
         val restored = VoiceConfigPreferencesMapper.fromPreferenceSnapshot(
             mapOf(
                 VoiceConfigPreferencesMapper.KEY_GROQ_API_KEY to "groq-key",
-                VoiceConfigPreferencesMapper.KEY_OPEN_ROUTER_API_KEY to "openrouter-key",
-                VoiceConfigPreferencesMapper.KEY_REASONING_MODEL_ID to "model-id",
-                VoiceConfigPreferencesMapper.KEY_REASONING_MODEL_LABEL to "Model label"
+                VoiceConfigPreferencesMapper.KEY_REASONING_PROVIDER to "groq",
+                VoiceConfigPreferencesMapper.KEY_REASONING_MODEL_ID to "model-id"
             )
         )
 
