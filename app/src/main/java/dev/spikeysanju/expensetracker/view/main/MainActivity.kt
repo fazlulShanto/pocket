@@ -17,7 +17,6 @@ import dev.spikeysanju.expensetracker.R
 import dev.spikeysanju.expensetracker.data.local.datastore.UIModeImpl
 import dev.spikeysanju.expensetracker.databinding.ActivityMainBinding
 import dev.spikeysanju.expensetracker.repo.TransactionRepo
-import dev.spikeysanju.expensetracker.services.exportcsv.ExportCsvService
 import dev.spikeysanju.expensetracker.view.main.viewmodel.TransactionViewModel
 import kotlinx.coroutines.flow.collect
 import javax.inject.Inject
@@ -35,9 +34,6 @@ class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var repo: TransactionRepo
-
-    @Inject
-    lateinit var exportCsvService: ExportCsvService
 
     @Inject
     lateinit var themeManager: UIModeImpl

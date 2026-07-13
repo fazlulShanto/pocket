@@ -319,7 +319,7 @@
                     android:background="@color/reporting_divider" />
 
                 <LinearLayout
-                    android:id="@+id/import_button"
+                    android:id="@+id/restore_backup_button"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="?attr/selectableItemBackground"
@@ -356,7 +356,7 @@
                         android:layout_marginStart="@dimen/dimen_16"
                         android:layout_weight="1"
                         android:fontFamily="@font/open_sans_semibold"
-                        android:text="@string/text_import_csv"
+                        android:text="@string/text_restore_backup"
                         android:textColor="@color/reporting_text_primary"
                         android:textSize="16sp" />
 
@@ -375,7 +375,7 @@
                     android:background="@color/reporting_divider" />
 
                 <LinearLayout
-                    android:id="@+id/export_button"
+                    android:id="@+id/create_backup_button"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="?attr/selectableItemBackground"
@@ -412,7 +412,7 @@
                         android:layout_marginStart="@dimen/dimen_16"
                         android:layout_weight="1"
                         android:fontFamily="@font/open_sans_semibold"
-                        android:text="@string/text_export_csv"
+                        android:text="@string/text_create_backup"
                         android:textColor="@color/reporting_text_primary"
                         android:textSize="16sp" />
 

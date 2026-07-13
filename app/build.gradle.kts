@@ -123,9 +123,6 @@ dependencies {
     //implementation "com.google.dagger:hilt-android-testing:$hilt_ver"
     implementation("androidx.hilt:hilt-common:1.0.0")
 
-    // OpenCsv
-    implementation("com.opencsv:opencsv:5.3")
-
     // Voice entry
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

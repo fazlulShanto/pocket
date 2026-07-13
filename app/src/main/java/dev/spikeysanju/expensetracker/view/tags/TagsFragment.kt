@@ -1,11 +1,13 @@
 package dev.spikeysanju.expensetracker.view.tags
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import android.widget.Filter
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -91,16 +93,23 @@ class TagsFragment : Fragment() {
             R.layout.item_autocomplete_layout,
             tagTypes
         )
-        val tagIconAdapter = ArrayAdapter(
+        val tagIconAdapter = TagIconSearchAdapter(
             requireContext(),
-            R.layout.item_autocomplete_layout,
             TagCatalog.iconOptions.map { option -> option.label }
         )
         (dialogBinding.tagTypeEt as? AutoCompleteTextView)?.setAdapter(tagTypeAdapter)
         (dialogBinding.tagIconEt as? AutoCompleteTextView)?.apply {
             setAdapter(tagIconAdapter)
             threshold = 1
-            setOnClickListener { showDropDown() }
+            setOnClickListener {
+                if (TagCatalog.iconOptions.any { option ->
+                        option.label.equals(text.toString().trim(), ignoreCase = true)
+                    }
+                ) {
+                    selectAll()
+                }
+                showDropDown()
+            }
             setOnItemClickListener { parent, _, position, _ ->
                 val selectedLabel = parent.getItemAtPosition(position) as? String ?: return@setOnItemClickListener
                 updateTagIconPreview(
@@ -176,4 +185,40 @@ class TagsFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
+}
+
+private class TagIconSearchAdapter(
+    context: Context,
+    private val allLabels: List<String>
+) : ArrayAdapter<String>(
+    context,
+    R.layout.item_autocomplete_layout,
+    ArrayList(allLabels)
+) {
+    private val iconFilter = object : Filter() {
+        override fun performFiltering(constraint: CharSequence?): FilterResults {
+            val query = constraint?.toString()?.trim().orEmpty()
+            val matches = if (query.isEmpty()) {
+                allLabels
+            } else {
+                allLabels.filter { label -> label.contains(query, ignoreCase = true) }
+            }
+
+            return FilterResults().apply {
+                values = matches
+                count = matches.size
+            }
+        }
+
+        override fun publishResults(constraint: CharSequence?, results: FilterResults) {
+            @Suppress("UNCHECKED_CAST")
+            val matches = results.values as? List<String> ?: emptyList()
+            setNotifyOnChange(false)
+            clear()
+            addAll(matches)
+            notifyDataSetChanged()
+        }
+    }
+
+    override fun getFilter(): Filter = iconFilter
 }

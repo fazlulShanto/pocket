@@ -8,41 +8,37 @@ import dev.spikeysanju.expensetracker.data.local.datastore.CurrencyPreference
 import dev.spikeysanju.expensetracker.data.local.datastore.UIModeImpl
 import dev.spikeysanju.expensetracker.model.Transaction
 import dev.spikeysanju.expensetracker.repo.TransactionRepo
+import dev.spikeysanju.expensetracker.services.backup.BackupDocumentV1
+import dev.spikeysanju.expensetracker.services.backup.ExpensoBackupService
 import dev.spikeysanju.expensetracker.services.datamanagement.TransactionDataService
-import dev.spikeysanju.expensetracker.services.exportcsv.TRANSACTION_CSV_HEADER
-import dev.spikeysanju.expensetracker.services.exportcsv.ExportCsvService
-import dev.spikeysanju.expensetracker.services.exportcsv.toCsvRows
+import dev.spikeysanju.expensetracker.utils.viewState.BackupState
 import dev.spikeysanju.expensetracker.utils.viewState.ClearDataState
 import dev.spikeysanju.expensetracker.utils.SupportedCurrency
 import dev.spikeysanju.expensetracker.utils.viewState.DetailState
-import dev.spikeysanju.expensetracker.utils.viewState.ExportState
-import dev.spikeysanju.expensetracker.utils.viewState.ImportState
+import dev.spikeysanju.expensetracker.utils.viewState.RestoreState
 import dev.spikeysanju.expensetracker.utils.viewState.ViewState
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
 class TransactionViewModel @Inject constructor(
     private val transactionRepo: TransactionRepo,
-    private val exportService: ExportCsvService,
+    private val backupService: ExpensoBackupService,
     private val transactionDataService: TransactionDataService,
     private val uiModeDataStore: UIModeImpl,
     private val currencyPreference: CurrencyPreference
 ) : ViewModel() {
 
-    // state for export csv status
-    private val _exportCsvState = MutableStateFlow<ExportState>(ExportState.Empty)
-    val exportCsvState: StateFlow<ExportState> = _exportCsvState
+    private val _backupState = MutableStateFlow<BackupState>(BackupState.Empty)
+    val backupState: StateFlow<BackupState> = _backupState
 
-    private val _importCsvState = MutableStateFlow<ImportState>(ImportState.Empty)
-    val importCsvState: StateFlow<ImportState> = _importCsvState
+    private val _restoreState = MutableStateFlow<RestoreState>(RestoreState.Empty)
+    val restoreState: StateFlow<RestoreState> = _restoreState
+    private var pendingRestore: BackupDocumentV1? = null
 
     private val _clearDataState = MutableStateFlow<ClearDataState>(ClearDataState.Empty)
     val clearDataState: StateFlow<ClearDataState> = _clearDataState
@@ -72,30 +68,53 @@ class TransactionViewModel @Inject constructor(
         }
     }
 
-    // export all Transactions to csv file
-    fun exportTransactionsToCsv(csvFileUri: Uri) = viewModelScope.launch {
-        _exportCsvState.value = ExportState.Loading
-        runCatching {
-            withContext(Dispatchers.IO) {
-                val rows = transactionRepo.getAllTransactions().first().toCsvRows()
-                exportService.writeToCSV(csvFileUri, TRANSACTION_CSV_HEADER, rows)
-            }
-        }.onSuccess { fileUri ->
-            _exportCsvState.value = ExportState.Success(fileUri)
-        }.onFailure { error ->
-            _exportCsvState.value = ExportState.Error(error)
-        }
+    fun createBackup(destination: Uri) = viewModelScope.launch {
+        _backupState.value = BackupState.Loading
+        runCatching { backupService.createBackup(destination) }
+            .onSuccess { fileUri -> _backupState.value = BackupState.Success(fileUri) }
+            .onFailure { error -> _backupState.value = BackupState.Error(error) }
     }
 
-    fun importTransactionsFromCsv(csvFileUri: Uri) = viewModelScope.launch {
-        _importCsvState.value = ImportState.Loading
-        runCatching {
-            transactionDataService.importTransactionsFromCsv(csvFileUri)
-        }.onSuccess { importedCount ->
-            _importCsvState.value = ImportState.Success(importedCount)
-        }.onFailure { error ->
-            _importCsvState.value = ImportState.Error(error)
+    fun inspectBackup(source: Uri) = viewModelScope.launch {
+        pendingRestore = null
+        _restoreState.value = RestoreState.Inspecting
+        runCatching { backupService.inspectBackup(source) }
+            .onSuccess { inspectedBackup ->
+                pendingRestore = inspectedBackup.document
+                _restoreState.value = RestoreState.Preview(inspectedBackup.preview)
+            }
+            .onFailure { error -> _restoreState.value = RestoreState.Error(error) }
+    }
+
+    fun confirmRestore() = viewModelScope.launch {
+        val document = pendingRestore
+        if (document == null) {
+            _restoreState.value = RestoreState.Error(
+                IllegalStateException("Select the backup file again before restoring.")
+            )
+            return@launch
         }
+
+        _restoreState.value = RestoreState.Restoring
+        runCatching { backupService.restore(document) }
+            .onSuccess { result ->
+                pendingRestore = null
+                _restoreState.value = RestoreState.Success(result)
+            }
+            .onFailure { error -> _restoreState.value = RestoreState.Error(error) }
+    }
+
+    fun cancelRestore() {
+        pendingRestore = null
+        _restoreState.value = RestoreState.Empty
+    }
+
+    fun consumeBackupState() {
+        _backupState.value = BackupState.Empty
+    }
+
+    fun consumeRestoreState() {
+        _restoreState.value = RestoreState.Empty
     }
 
     fun clearAllData() = viewModelScope.launch {

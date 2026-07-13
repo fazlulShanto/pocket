@@ -118,16 +118,20 @@
     <string name="text_edit">Edit</string>
     <string name="text_createdAt">Created At</string>
 
-    <!--  Share -->
-    <string name="success_transaction_export">Transaction exported successfully!</string>
-    <string name="failed_transaction_export">Transaction exported failed ☹️</string>
-    <string name="success_transaction_import">Transactions imported: %1$d.</string>
-    <string name="failed_transaction_import">Transaction import failed ☹️</string>
+    <!--  Backup and data management -->
+    <string name="success_backup_created">Backup created successfully.</string>
+    <string name="success_backup_restored">Restored %1$d transactions and %2$d tags.</string>
+    <string name="backup_error_title">Couldn’t create backup</string>
+    <string name="restore_error_title">Couldn’t restore backup</string>
+    <string name="backup_unknown_error">An unexpected backup error occurred.</string>
+    <string name="restore_preview_title">Restore this backup?</string>
+    <string name="restore_preview_message">Created %1$s with Expenso %2$s\n\nTransactions: %3$d\nTags: %4$d\nCurrency: %5$s\nTheme: %6$s\n\nThis replaces the current transactions, tags, and supported preferences. API keys stored on this device are preserved.</string>
+    <string name="restore_confirm">Restore and replace</string>
+    <string name="backup_theme_dark">Dark</string>
+    <string name="backup_theme_light">Light</string>
+    <string name="text_error">Something went wrong.</string>
     <string name="success_clear_data">Cleared %1$d transactions and restored default tags.</string>
     <string name="failed_clear_data">Unable to clear saved data ☹️</string>
-    <string name="text_error">Transaction exported failed ☹️</string>
-    <string name="support_pending">Support for export on Android10+ is still in progress, kindly be patient and thanks for support!</string>
-    <string name="text_open">Open</string>
     <string name="text_clear_data_title">Clear saved data?</string>
     <string name="text_clear_data_message">This removes all transactions and resets tags back to the default list. Theme, currency, and voice settings stay unchanged.</string>
     <string name="text_clear_data_confirm">Clear data</string>
@@ -147,8 +151,8 @@
     <string name="share_message">\%s \nAmount: %s, \nTransaction-Type: %s, \nTag: %s, \nDate: %s, \nNote: %s, \nCreatedAt: %s \n\nVisit: https://github.com/fazlulShanto/Pocket</string>
     <string name="text_transaction_empty_title">No Transaction Yet!</string>
     <string name="text_transaction_empty_desc">After your first transaction you will be able to view it here</string>
-    <string name="text_import_csv">Import from CSV</string>
-    <string name="text_export_csv">Export to CSV</string>
+    <string name="text_restore_backup">Restore backup</string>
+    <string name="text_create_backup">Create backup</string>
     <string name="text_clear_data">Clear data</string>
     <string name="text_add_transaction">Add Transaction</string>
     <string name="text_undo">Undo</string>

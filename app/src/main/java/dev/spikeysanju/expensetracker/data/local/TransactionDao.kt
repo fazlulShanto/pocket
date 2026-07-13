@@ -23,6 +23,9 @@ interface TransactionDao {
     @Query("SELECT * FROM all_transactions ORDER by createdAt DESC")
     fun getAllTransactions(): Flow<List<Transaction>>
 
+    @Query("SELECT * FROM all_transactions ORDER BY id ASC")
+    suspend fun getAllTransactionsSnapshot(): List<Transaction>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransactions(transactions: List<Transaction>)
 

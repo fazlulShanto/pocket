@@ -22,7 +22,7 @@ interface TagDao {
     @Query("SELECT * FROM tags")
     fun getAllTags(): Flow<List<Tag>>
 
-    @Query("SELECT * FROM tags")
+    @Query("SELECT * FROM tags ORDER BY id ASC")
     suspend fun getAllTagsSnapshot(): List<Tag>
 
     @Query("DELETE FROM tags")

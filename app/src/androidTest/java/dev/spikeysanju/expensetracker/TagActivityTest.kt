@@ -1,6 +1,8 @@
 package dev.spikeysanju.expensetracker
 
+import android.widget.AutoCompleteTextView
 import androidx.recyclerview.widget.RecyclerView
+import androidx.navigation.Navigation
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.Espresso.openActionBarOverflowOrOptionsMenu
 import androidx.test.espresso.Espresso.pressBack
@@ -8,6 +10,7 @@ import androidx.test.espresso.action.ViewActions.clearText
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.closeSoftKeyboard
 import androidx.test.espresso.action.ViewActions.replaceText
+import androidx.test.espresso.action.ViewActions.scrollTo
 import androidx.test.espresso.action.ViewActions.typeText
 import androidx.test.espresso.assertion.ViewAssertions.doesNotExist
 import androidx.test.espresso.assertion.ViewAssertions.matches
@@ -31,6 +34,7 @@ import org.hamcrest.Matchers.allOf
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.Assert.assertTrue
 import org.junit.runner.RunWith
 
 /**
@@ -139,6 +143,42 @@ class TagActivityTest {
         onView(withText("Work"))
             .check(matches(isDisplayed()))
 
+    }
+
+    private fun navigateDirectlyToTagsScreen() {
+        activityScenarioRule.scenario.onActivity { activity ->
+            Navigation.findNavController(activity, R.id.nav_host_fragment)
+                .navigate(R.id.tagsFragment)
+        }
+
+        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).waitForIdle(1_000)
+        onView(withId(R.id.tagsRecyclerView)).check(matches(isDisplayed()))
+    }
+
+    @Test
+    fun iconSearchKeepsAllTagFieldsReachable() {
+        navigateDirectlyToTagsScreen()
+
+        onView(withId(R.id.addTagFab)).perform(click())
+        onView(withId(R.id.tagIconEt))
+            .perform(scrollTo(), click(), replaceText("car"))
+
+        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).waitForIdle(1_000)
+        onView(withId(R.id.tagIconEt))
+            .check(matches(withText("car")))
+            .check { view, _ ->
+                val results = (view as AutoCompleteTextView).adapter
+                assertTrue(results.count > 0)
+                assertTrue(
+                    (0 until results.count).all { index ->
+                        results.getItem(index).toString().contains("car", ignoreCase = true)
+                    }
+                )
+            }
+
+        onView(withId(R.id.tagKeywordEt))
+            .perform(scrollTo())
+            .check(matches(isDisplayed()))
     }
 
     @Test

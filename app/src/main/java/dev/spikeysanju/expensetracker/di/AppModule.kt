@@ -15,7 +15,6 @@ import dev.spikeysanju.expensetracker.data.local.datastore.CurrencyPreference
 import dev.spikeysanju.expensetracker.data.local.datastore.CurrencyPreferenceDataStore
 import dev.spikeysanju.expensetracker.data.local.datastore.UIModeDataStore
 import dev.spikeysanju.expensetracker.data.local.datastore.UIModeImpl
-import dev.spikeysanju.expensetracker.services.exportcsv.ExportCsvService
 import dev.spikeysanju.expensetracker.utils.TagCatalog
 import javax.inject.Singleton
 
@@ -75,9 +74,4 @@ object AppModule {
             .build()
     }
 
-    @Singleton
-    @Provides
-    fun provideExportCSV(@ApplicationContext context: Context): ExportCsvService {
-        return ExportCsvService(appContext = context)
-    }
 }
